@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Santa's Special Delivery — Asiyah</title>
+
+<style>
+  :root{
+    --accent:#c11;
+    --glow:#ff3a3a;
+  }
+  html,body{
+    height:100%;margin:0;
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial;
+    background:white;overflow:hidden;
+  }
+
+  /* Stage container */
+  .stage{
+    width:100%;height:100vh;display:flex;
+    align-items:center;justify-content:center;
+    flex-direction:column;text-align:center;
+    padding:20px;box-sizing:border-box;
+    position:relative;z-index:10;
+  }
+
+  /* Santa image */
+  .santa img{
+    width:240px;max-width:70vw;
+    animation:popin 1.2s ease-out;
+    filter:drop-shadow(0 8px 20px rgba(0,0,0,0.2));
+  }
+  @keyframes popin{
+    0%{transform:scale(0.6);opacity:0;}
+    100%{transform:scale(1);opacity:1;}
+  }
+
+  .santa-dialogue{
+    font-size:22px;max-width:700px;
+    margin-top:10px;color:#000;
+    animation:fadeIn 1.5s ease-out;
+  }
+
+  @keyframes fadeIn{
+    from{opacity:0;transform:translateY(12px);}
+    to{opacity:1;transform:translateY(0);}
+  }
+
+  /* Card */
+  #card{
+    display:none;margin-top:20px;
+    background:#fff;border:2px solid #ddd;
+    padding:18px;border-radius:14px;
+    width:min(380px,92%);
+    box-shadow:0 10px 30px rgba(0,0,0,0.12);
+    animation:popin 0.6s ease-out;
+  }
+
+  .controls{display:flex;gap:14px;justify-content:center;position:relative;}
+
+  .btn{
+    border:0;padding:10px 20px;font-size:18px;
+    border-radius:10px;cursor:pointer;
+    box-shadow:0 6px 14px rgba(0,0,0,0.12);
+    transition:0.2s;
+  }
+  #yesBtn{background:#7be28a;color:#053f0d;}
+  #yesBtn:hover{transform:scale(1.05);}
+
+  #noBtn{
+    background:#ff8b8b;color:#5a0000;
+    position:absolute;top:50%;left:50%;
+    transform:translate(-50%,-50%);
+  }
+
+  /* Love Message */
+  #loveMessage{
+    font-size:54px;font-weight:800;color:var(--accent);
+    display:none;margin-top:28px;
+    animation:heartPop 1.4s ease-out infinite alternate;
+    text-shadow:0 0 18px var(--glow);
+  }
+  @keyframes heartPop{
+    0%{transform:scale(1);}
+    100%{transform:scale(1.14);}
+  }
+
+  /* Snow canvas */
+  canvas#snow{
+    position:fixed;top:0;left:0;width:100%;height:100%;
+    pointer-events:none;z-index:1;
+  }
+
+  /* Music bar */
+  .music-bar{
+    position:fixed;left:16px;bottom:16px;
+    background:rgba(255,255,255,0.85);
+    padding:10px 14px;border-radius:12px;
+    box-shadow:0 8px 20px rgba(0,0,0,0.12);
+    backdrop-filter:blur(6px);
+    display:none;z-index:20;
+  }
+
+  /* QR Code */
+  #qrWrap{
+    position:fixed;right:16px;bottom:16px;
+    background:rgba(255,255,255,0.85);
+    padding:10px;border-radius:12px;
+    box-shadow:0 8px 20px rgba(0,0,0,0.12);
+    backdrop-filter:blur(6px);
+    display:flex;flex-direction:column;
+    align-items:center;gap:6px;z-index:20;
+  }
+
+  @media (max-width:520px){
+    #loveMessage{font-size:36px;}
+  }
+</style>
+</head>
+
+<body>
+
+<canvas id="snow"></canvas>
+
+<div class="stage" id="app">
+
+  <div class="santa">
+    <!-- Santa PNG -->
+    <img src="https://i.imgur.com/1GKq5Zg.png" alt="Santa">
+    <div class="santa-dialogue">
+      Wait — I have a special delivery for you, young man…<br>
+      From an Asi… Ah— Asiyah! Yes yes, a wonderful young lady.
+    </div>
+  </div>
+
+  <div id="card">
+    <p>Santa is giving you a card. Would you like to open it?</p>
+    <div class="controls">
+      <button id="yesBtn" class="btn">Yes</button>
+      <button id="noBtn" class="btn">No</button>
+    </div>
+  </div>
+
+  <div id="loveMessage">I Love You ❤️</div>
+
+</div>
+
+<!-- Music bar -->
+<div class="music-bar" id="musicBar">
+  <button id="playMusicBtn">Play</button>
+  <button id="pauseMusicBtn" style="display:none">Pause</button>
+</div>
+
+<!-- QR -->
+<div id="qrWrap">
+  <div id="qrcode"></div>
+  <small>Scan to open</small>
+</div>
+
+<!-- Music -->
+<audio id="bgMusic" loop preload="auto">
+  <source src="data:audio/mpeg;base64,//uQZAAAAAAAAAAAAAAAAAAAA..." type="audio/mpeg">
+</audio>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<script>
+/* Show card */
+setTimeout(()=> card.style.display='block',1400);
+
+/* No button runaway */
+function moveNo(){
+  const vw = window.innerWidth, vh = window.innerHeight;
+  noBtn.style.left = Math.random()*(vw-140)+ 'px';
+  noBtn.style.top = Math.random()*(vh-80)+ 'px';
+}
+noBtn.addEventListener('mouseenter',moveNo);
+noBtn.addEventListener('click',moveNo);
+noBtn.addEventListener('touchstart',e=>{e.preventDefault();moveNo();});
+
+/* Yes button: show love + confetti */
+yesBtn.onclick = ()=>{
+  card.style.display="none";
+  loveMessage.style.display="block";
+  musicBar.style.display="flex";
+  bgMusic.play().then(()=>{playMusicBtn.style.display='none';pauseMusicBtn.style.display='inline-block';});
+  startConfetti();
+};
+
+/* Music */
+playMusicBtn.onclick=()=>{
+  bgMusic.play();
+  playMusicBtn.style.display='none';
+  pauseMusicBtn.style.display='inline-block';
+};
+pauseMusicBtn.onclick=()=>{
+  bgMusic.pause();
+  pauseMusicBtn.style.display='none';
+  playMusicBtn.style.display='inline-block';
+};
+
+/* QR */
+new QRCode(document.getElementById("qrcode"), {
+  text: window.location.href, width:120, height:120,
+  colorDark:"#000",colorLight:"#fff"
+});
+
+/* Snow */
+const c=document.getElementById("snow"),x=c.getContext("2d");
+let w=c.width=innerWidth,h=c.height=innerHeight;
+let p=[];
+for(let i=0;i<120;i++){
+  p.push({x:Math.random()*w,y:Math.random()*h,r:Math.random()*3+1,vy:Math.random()*1+0.5});
+}
+function snow(){
+  x.clearRect(0,0,w,h);
+  x.fillStyle="rgba(255,255,255,0.9)";
+  x.beginPath();
+  for(let s of p){
+    x.moveTo(s.x,s.y);
+    x.arc(s.x,s.y,s.r,0,Math.PI*2);
+    s.y+=s.vy;
+    if(s.y>h) s.y=-10;
+  }
+  x.fill();
+  requestAnimationFrame(snow);
+}
+snow();
+
+/* Confetti */
+function startConfetti(){
+  for(let i=0;i<80;i++){
+    const conf=document.createElement("div");
+    conf.style.position="fixed";
+    conf.style.left=Math.random()*100+"vw";
+    conf.style.top="-20px";
+    conf.style.width="10px";conf.style.height="14px";
+    conf.style.background=`hsl(${Math.random()*360},90%,60%)`;
+    conf.style.transform=`rotate(${Math.random()*360}deg)`;
+    conf.style.opacity="0.9";
+    conf.style.zIndex=30;
+    conf.style.animation=`drop ${1+Math.random()*1.8}s linear forwards`;
+    document.body.appendChild(conf);
+    setTimeout(()=>conf.remove(),3000);
+  }
+}
+</script>
+
+<style>
+@keyframes drop{
+  to{transform:translateY(110vh) rotate(360deg);}
+}
+</style>
+
+</body>
+</html>
